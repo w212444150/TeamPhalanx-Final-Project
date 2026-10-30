@@ -1,12 +1,12 @@
-# TerraModel - Cybersecurity in AI-Powered Warehouse Automation
+# Cybersecurity in AI-Powered Warehouse Automation
 
 > **Dual-course submission.** This repository is the same working project submitted to two Houston Community College courses in Fall 2026:
 > - **Applied AI and Robotics Capstone** - Team TerraModel (Robert B. Thompson, Cesar Noriega)
-> - **ITAI 2376 Final Project** - Team Phalanx (Robert B. Thompson, submitter)
+> - **ITAI 2376 Final Project** - Team Phalanx (Robert Thompson, Olis Bahari, Njeh Ababbio and Nichelle )
 >
 > The codebase, metrics, reports, and reproducibility story are identical for both. Grader-oriented pointers are in [`SUBMISSIONS.md`](SUBMISSIONS.md).
 
-Project by **Robert B. Thompson** (co-lead on TerraModel, submitter on Team Phalanx) and **Cesar Noriega** (co-lead on TerraModel), Houston Community College, Fall 2026.
+Project by Team Phalanx
 
 Multi-agent AI system for detecting cyber threats against robots, PLCs, and industrial sensors in an automated warehouse environment. Three detection agents feed an orchestrator that tags findings with real MITRE ATT&CK for ICS technique IDs and defensive controls from NIST CSF 2.0, IEC 62443, NIST SP 800-82 Rev. 3, and MITRE D3FEND.
 
