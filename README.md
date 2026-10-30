@@ -1,0 +1,189 @@
+# TerraModel - Cybersecurity in AI-Powered Warehouse Automation
+
+> **Dual-course submission.** This repository is the same working project submitted to two Houston Community College courses in Fall 2026:
+> - **Applied AI and Robotics Capstone** - Team TerraModel (Robert B. Thompson, Cesar Noriega)
+> - **ITAI 2376 Final Project** - Team Phalanx (Robert B. Thompson, submitter)
+>
+> The codebase, metrics, reports, and reproducibility story are identical for both. Grader-oriented pointers are in [`SUBMISSIONS.md`](SUBMISSIONS.md).
+
+Project by **Robert B. Thompson** (co-lead on TerraModel, submitter on Team Phalanx) and **Cesar Noriega** (co-lead on TerraModel), Houston Community College, Fall 2026.
+
+Multi-agent AI system for detecting cyber threats against robots, PLCs, and industrial sensors in an automated warehouse environment. Three detection agents feed an orchestrator that tags findings with real MITRE ATT&CK for ICS technique IDs and defensive controls from NIST CSF 2.0, IEC 62443, NIST SP 800-82 Rev. 3, and MITRE D3FEND.
+
+## For graders and reviewers
+
+Start here. Each row below links to the full submission for one phase.
+
+| Phase | Weeks | Primary Deliverable | Supporting Documents |
+|---|---|---|---|
+| Phase 01 | 1-3 | [Initial Advance (slide deck)](docs/phase01-initial-advance.pptx) | [Phase 01 markdown](docs/phase01-initial-advance.md) |
+| Phase 02 | 4-6 | [Phase 02 Data Report](docs/phase02-data-report.md) | - |
+| Phase 03 | 7-10 | **[Phase 03 Deliverable (Word)](docs/TerraModel_Phase03_Deliverable.docx)** or [PDF](docs/TerraModel_Phase03_Deliverable.pdf) | [Model Report](docs/phase03-model-report.md), [Limitation Fixes](docs/phase03-limitation-fixes.md) |
+| Phase 04 | 11-12 | Integration, red team dry run, final delivery (planned) | - |
+
+### Reproduce every number in the Phase 03 deliverable
+
+```bash
+git clone https://github.com/w212444150/TerraModel_WarehouseCyberSec.git
+cd TerraModel_WarehouseCyberSec
+make setup           # install dependencies
+make phase03-fixes   # run the full Phase 03 pipeline with limitation fixes
+make test            # 16 pytest cases, all pass
+```
+
+Total runtime: about 90 seconds on a laptop. Random seed is pinned at 42 in `config.yaml`. GitHub Actions CI runs the full pipeline on every push to the main branch.
+
+Google Colab version (recommended for graders): paste cells from `docs/phase03-model-report.md` section 6 into a fresh Colab notebook. The live CISA KEV catalog returns 1,764+ real entries on Colab (sandbox blocks it).
+
+## Honest scope statement
+
+This repository is an **academic research baseline**, not a production security product. It uses **synthetic warehouse OT telemetry** generated in pure Python because the Factory I/O + OpenPLC + ROS 2 stack from the proposal is not yet set up. The synthetic data is shaped to mirror real OT telemetry so the preprocessing, feature engineering, and model code transfers directly when a real simulation feeds the pipeline.
+
+All metrics below come from actually running the code in this repo. No hand-waved numbers.
+
+## What the system does
+
+| Agent | Job | Baseline Method |
+|---|---|---|
+| Agent 1 | Detect anomalies in OT network traffic | Isolation Forest on 15 network-window features |
+| Agent 2 | Rank unpatched ICS vulnerabilities to fix | Rule-based CVSS + exposure + age score |
+| Agent 3 | Detect spoofed commands and robot deviations | Mahalanobis distance threshold on 7 robot features |
+| Orchestrator | Correlate agent outputs; tag with ATT&CK for ICS | Rule-based mapping to T0836, T0855, T0832, T0814, T0859, T0866, T0863 |
+
+## Model results (actual, from one full pipeline run with seed=42)
+
+Phase 02 baselines are the floor. Phase 03 supervised models beat them substantially.
+
+| Agent | Phase 02 Baseline | Phase 03 Champion | Lift |
+|---|---|---|---|
+| Agent 1 | Isolation Forest, F1=0.242, PR-AUC=0.545 | XGBoost (Optuna-tuned), F1=0.434, **PR-AUC=0.660** | +21% PR-AUC, +79% F1 |
+| Agent 2 | Rule-based, 7 of 10 OT-critical in top-10 | Learned Logistic, **10 of 10** OT-critical | +3 of 10 |
+| Agent 3 | Mahalanobis (p95), F1=0.374, Recall=0.244 | Random Forest, **F1=0.793, Recall=0.781, PR-AUC=0.897** | +112% F1, +220% Recall |
+
+Full Phase 03 details with error analysis, SHAP summaries, confusion matrices, and PR curves: [`docs/phase03-model-report.md`](docs/phase03-model-report.md)
+
+Metrics JSON files: [`reports/phase03/agent1_metrics.json`](reports/phase03/agent1_metrics.json), [`reports/phase03/agent2_metrics.json`](reports/phase03/agent2_metrics.json), [`reports/phase03/agent3_metrics.json`](reports/phase03/agent3_metrics.json)
+
+## Reproduce the full pipeline
+
+```bash
+git clone https://github.com/w212444150/TerraModel_WarehouseCyberSec.git
+cd TerraModel_WarehouseCyberSec
+
+python3 -m venv venv && source venv/bin/activate
+make setup
+make data        # fetch threat data + generate synthetic telemetry + clean + features + split
+make baseline    # Phase 02 unsupervised baselines
+make phase03     # Phase 03 supervised models + framework mapper + orchestrator
+make eda         # produce EDA charts and metrics_summary.json
+make test        # 11 pytest cases
+make all         # data + baseline + eda + phase03
+```
+
+Total runtime on a laptop: about 90 seconds end to end for the full `make all`.
+
+## Dataset generated by the pipeline
+
+| Stream | Rows | Rate | File |
+|---|---|---|---|
+| PLC telemetry (conveyor speed registers) | 192,000 | 10 Hz | `data/raw/plc_telemetry.parquet` |
+| Robot joint states (commanded vs actual, torque) | 1,728,000 | 20 Hz | `data/raw/robot_states.parquet` |
+| Network flow summaries (1-second windows) | 4,800 | 1 Hz | `data/raw/network_flows.parquet` |
+| **Total labeled rows** | **1,924,800** | | |
+
+- 8 scenarios (4 normal, 4 attack) at 10 minutes per scenario.
+- Attack scenarios inject one of 7 MITRE ATT&CK for ICS techniques each.
+- Train / val / test split: 70 / 15 / 15, stratified by `attack_class`, seed 42.
+
+## Real threat data integrated
+
+- **MITRE ATT&CK for ICS v18** - downloaded live from `github.com/mitre-attack/attack-stix-data`. All 7 target techniques resolve. (`data/threat/attack/techniques_lookup.json`)
+- **CISA ICS Advisories** - live fetch from `cisa.gov` with a bundled 25-advisory fallback. 2024-2025 advisories across Siemens, Rockwell, Schneider, ABB, Mitsubishi, FANUC, Omron, and others. (`data/threat/cisa/advisories_flat.csv`)
+
+## Project layout
+
+```
+TerraModel_WarehouseCyberSec/
+  README.md                                 # this file
+  Makefile                                  # setup | data | baseline | eda | test
+  config.yaml                               # all seeds and paths
+  requirements.txt                          # pinned minimums
+  .github/workflows/ci.yml                  # GitHub Actions pipeline test
+  collectors/
+    generate_synthetic.py                   # pure-Python synthetic OT data generator
+    fetch_attack.py                         # downloads MITRE ATT&CK ICS STIX bundle
+    fetch_cisa.py                           # fetches CISA ICS advisories (with fallback)
+  pipeline/
+    clean.py                                # cleaning + removal reasons report
+    features.py                             # per-agent feature engineering
+    split.py                                # stratified 70/15/15 split
+  agents/
+    agent1_anomaly/baseline.py              # Isolation Forest
+    agent2_assessment/baseline.py           # Rule-based CVSS+exposure ranker
+    agent3_integrity/baseline.py            # Mahalanobis distance threshold
+    orchestrator/attack_mapper.py           # ATT&CK ID tagging
+  notebooks/
+    06_baseline_eda.py                      # charts + metrics_summary.json
+  tests/
+    test_pipeline.py                        # 6 pytest cases
+  data/                                     # generated, gitignored except .gitkeeps
+  models/                                   # fitted models (gitignored)
+  reports/                                  # metrics + charts (gitignored)
+  docs/
+    phase02-data-report.md                  # Phase 02 submission (plain-text form)
+```
+
+## Cybersecurity framework mapping (Phase 03)
+
+Every detected ATT&CK for ICS technique is enriched with controls from four defensive frameworks. Code: [`agents/orchestrator/framework_mapper.py`](agents/orchestrator/framework_mapper.py).
+
+- **NIST Cybersecurity Framework 2.0** - functions and subcategories (DE.CM-01, PR.AA-01, etc.)
+- **IEC 62443-3-3** - System Security Requirements for industrial automation and control systems
+- **NIST SP 800-82 Rev. 3** - Guide to Operational Technology Security control sections
+- **MITRE D3FEND** - Defensive countermeasure IDs (D3-NTA, D3-MFA, D3-PCSV, etc.)
+
+Every entry in [`reports/phase03/consolidated_alerts.json`](reports/phase03/consolidated_alerts.json) carries the full framework mapping so a warehouse security team can trace alerts to the standards their audits recognize.
+
+## MITRE ATT&CK for ICS techniques covered
+
+| ID | Name | Primary Detector |
+|---|---|---|
+| T0836 | Modify Parameter | Agent 1 + Agent 3 |
+| T0855 | Unauthorized Command Message | Agent 1 + Agent 3 |
+| T0832 | Manipulation of View | Agent 3 |
+| T0814 | Denial of Service | Agent 1 |
+| T0859 | Valid Accounts | Agent 2 (static) |
+| T0866 | Exploitation of Remote Services | Agent 1 + Agent 2 |
+| T0863 | User Execution | Agent 2 + Agent 3 |
+
+## What is NOT yet in this repo (honest gaps)
+
+- No Factory I/O integration. The synthetic data generator replaces it in Phase 02.
+- No OpenPLC runtime connected to a sim.
+- No ROS 2 Humble node capturing real robot data.
+- No supervised deep models yet. Isolation Forest and Mahalanobis are unsupervised floors.
+- No orchestrator REST API yet. Attack mapper exists as a Python module. FastAPI wrapper lands in Phase 03.
+- No Streamlit operator UI yet. Phase 03.
+- Agent 2 uses the 25-advisory fallback dataset when the CISA live feed is unreachable. On a network that allows cisa.gov the live feed replaces it transparently.
+
+## Privacy and ethics
+
+- No PII at any stage. All data is synthetic or public.
+- No live attack code outside this repository. Attack traffic stays bounded to the generator.
+- Every ATT&CK mapping cites MITRE directly via its real STIX bundle. No invented techniques.
+- Academic research only, not production security.
+
+## Phase 03 roadmap
+
+1. **Weeks 7-8**: Replace Isolation Forest with Autoencoder+LSTM for Agent 1. Replace rule-based Agent 2 with XGBoost ranker. Train trajectory+command-sequence LSTM for Agent 3.
+2. **Weeks 9-10**: Build the orchestrator FastAPI service and Streamlit operator UI.
+3. **Weeks 11-12**: Red team dry run, final metrics, 10-minute demo video.
+
+Full Phase 02 data report: [`docs/phase02-data-report.md`](docs/phase02-data-report.md).
+
+## Contact
+
+- Robert B. Thompson - Co-lead
+- Cesar Noriega - Co-lead
+
+License: Academic use. See `LICENSE` for details.
