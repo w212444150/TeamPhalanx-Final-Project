@@ -2,7 +2,7 @@
 
 > **Dual-course submission.** This repository is the same working project submitted to two Houston Community College courses in Fall 2026:
 > - **Applied AI and Robotics Capstone** - Team TerraModel (Robert B. Thompson, Cesar Noriega)
-> - **ITAI 2376 Final Project** - Team Phalanx (Robert Thompson, Olis Bahari, Njeh Ababbio and Nichelle )
+> - **ITAI 2376 Final Project** - Team Phalanx (Robert Thompson, Olis Bahari, Njeh Ababbio and Nichelle Graf )
 >
 > The codebase, metrics, reports, and reproducibility story are identical for both. Grader-oriented pointers are in [`SUBMISSIONS.md`](SUBMISSIONS.md).
 
