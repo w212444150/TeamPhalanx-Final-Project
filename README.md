@@ -12,7 +12,7 @@ Multi-agent AI system for detecting cyber threats against robots, PLCs, and indu
 
 ## For graders and reviewers
 
-Start here. Each row below links to the full submission for one phase.
+Each row below links to the full submission for one phase.
 
 | Phase | Weeks | Primary Deliverable | Supporting Documents |
 |---|---|---|---|
@@ -25,7 +25,7 @@ Start here. Each row below links to the full submission for one phase.
 
 ```bash
 git clone https://github.com/w212444150/TerraModel_WarehouseCyberSec.git
-cd TerraModel_WarehouseCyberSec
+cd Phalanx_Sentinel_WarehouseCyberSec
 make setup           # install dependencies
 make phase03-fixes   # run the full Phase 03 pipeline with limitation fixes
 make multi-seed      # 10-seed mean +/- std per metric (honest variance check)
@@ -36,7 +36,7 @@ Total runtime: about 2 minutes on a laptop. Random seed is pinned at 42 in `conf
 
 Google Colab version (recommended for graders): paste cells from `docs/phase03-model-report.md` section 6 into a fresh Colab notebook. The live CISA KEV catalog returns 1,764+ real entries on Colab (sandbox blocks it).
 
-## Honest scope statement
+## Scope statement
 
 This repository is an **academic research baseline**, not a production security product. It uses **synthetic warehouse OT telemetry** generated in pure Python because the Factory I/O + OpenPLC + ROS 2 stack from the proposal is not yet set up. The synthetic data is shaped to mirror real OT telemetry so the preprocessing, feature engineering, and model code transfers directly when a real simulation feeds the pipeline.
 
